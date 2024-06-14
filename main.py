@@ -12,6 +12,7 @@ from matplotlib.patches import Patch
 from matplotlib.backend_bases import MouseEvent
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from shapely.geometry import Point
+from matplotlib_scalebar.scalebar import ScaleBar
 
 
 
@@ -115,6 +116,19 @@ def parse_geographic_data():
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda val, pos: '{:.0f}'.format(val)))
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda val, pos: '{:.0f}'.format(val)))
 
+        # 添加比例尺
+        scalebar = ScaleBar(1000, location='lower right')
+        ax.add_artist(scalebar)
+
+        # 添加指北针
+        x, y, arrow_length = 0.95, 0.95, 0.1
+        ax.annotate('N',
+                    xy=(x, y), xytext=(x, y - arrow_length),
+                    arrowprops=dict(facecolor='black', width=5, headwidth=15),
+                    ha='center', va='center', fontsize=12,
+                    xycoords=ax.transAxes)
+
+
         # 设置标题
         ax.set_title('基于GeoJSON的内蒙古财经大学可视化地图')
         plt.savefig('map.png')  # 保存为 PNG 格式的文件
@@ -141,6 +155,7 @@ def open_shapefile():
         try:
             gdf = gpd.read_file(file_path)
             display_shapefile_content(gdf)
+            print(gdf)
             messagebox.showinfo("信息", f"已打开 Shapefile 文件: {file_path}")
         except Exception as e:
             messagebox.showerror("错误", f"无法打开 Shapefile 文件: {e}")
@@ -235,7 +250,7 @@ def show_navigation_map():
             if x is not None and y is not None:
                 clicked_geom = gdf[gdf.geometry.apply(lambda geom: geom.contains(Point(x, y)))]
                 if not clicked_geom.empty:
-                    building_info_id = clicked_geom.type.index.asi8[-1]
+                    building_info_id = clicked_geom.index[-1]
                     building_info = building_info_dict.get(building_info_id)
                     if building_info:
                         show_building_info(building_info)
@@ -250,7 +265,7 @@ def show_navigation_map():
         photo_path = building_info.get('photo')
         if photo_path:
             image = Image.open(photo_path)
-            image = image.resize((800, 600), Image.ANTIALIAS)
+            image = image.resize((800, 600), Image.LANCZOS)
             photo = ImageTk.PhotoImage(image)
             photo_label = tk.Label(info_window, image=photo)
             photo_label.image = photo  # 保持引用，防止图片被垃圾回收
